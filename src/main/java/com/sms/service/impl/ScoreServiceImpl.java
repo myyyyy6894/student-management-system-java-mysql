@@ -6,6 +6,10 @@ import com.sms.dao.StudentDao;
 import com.sms.dao.CourseDao;
 // 导入成绩 DAO 接口，用于成绩的增删改查、明细查询和统计。
 import com.sms.dao.ScoreDao;
+// 导入业务冲突异常（409）。
+import com.sms.exception.ConflictException;
+// 导入资源不存在异常（404）。
+import com.sms.exception.NotFoundException;
 // 导入成绩查询参数对象。
 import com.sms.model.dto.ScoreQueryDTO;
 // 导入成绩实体类。
@@ -18,6 +22,8 @@ import com.sms.model.vo.ScoreDetailVO;
 import com.sms.model.vo.ScoreStatsVO;
 // 导入成绩业务接口。
 import com.sms.service.ScoreService;
+// 导入分页参数工具类。
+import com.sms.util.PageUtil;
 // 导入 List，用于保存分页明细结果。
 import java.util.List;
 // 导入精确小数类型，用于分数范围校验。
@@ -30,6 +36,15 @@ import java.sql.SQLException;
  * <p>负责成绩业务规则校验，并把 DAO 抛出的数据库异常转换成运行时异常。</p>
  */
 public class ScoreServiceImpl implements ScoreService {
+
+    // 分数下限。
+    private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
+
+    // 分数上限。
+    private static final BigDecimal MAX_SCORE = BigDecimal.valueOf(100);
+
+    // 备注最大长度，对应 score.remarks VARCHAR(255)。
+    private static final int MAX_REMARKS_LENGTH = 255;
 
     // 学生数据访问接口，用于校验学生是否存在。
     private final StudentDao studentDao;
@@ -120,12 +135,12 @@ public class ScoreServiceImpl implements ScoreService {
         try {
             // 校验学生是否存在，避免直接向数据库写入无效外键。
             if (studentDao.findById(score.getStudentId()) == null) {
-                throw new IllegalArgumentException("学生不存在");
+                throw new NotFoundException("学生不存在");
             }
 
             // 校验课程是否存在。
             if (courseDao.findById(score.getCourseId()) == null) {
-                throw new IllegalArgumentException("课程不存在");
+                throw new NotFoundException("课程不存在");
             }
 
             // 校验该学生该课程是否已经有成绩，避免触发数据库唯一索引错误。
@@ -133,7 +148,7 @@ public class ScoreServiceImpl implements ScoreService {
 
             // 如果已经存在，业务层直接拦截，提示前端走修改流程。
             if (existingScore != null) {
-                throw new IllegalArgumentException("该学生本门课程成绩已存在，请走修改流程");
+                throw new ConflictException("该学生本门课程成绩已存在，请走修改流程");
             }
 
             // 调用 DAO 插入成绩，并拿到数据库生成的自增主键。
@@ -142,8 +157,8 @@ public class ScoreServiceImpl implements ScoreService {
             // 回填主键，方便 Controller 或测试代码直接拿到新成绩的 ID。
             score.setId(generatedId);
         } catch (SQLException exception) {
-            // 数据库访问异常统一转成运行时异常。
-            throw wrapException("录入成绩失败", exception);
+            // 并发场景下唯一索引仍可能被触发，这里统一转换成 409。
+            throw wrapInsertException("录入成绩失败", "该学生本门课程成绩已存在，请走修改流程", exception);
         }
     }
 
@@ -161,9 +176,9 @@ public class ScoreServiceImpl implements ScoreService {
             // 先确认原成绩存在，避免更新 0 行时上层无法得到明确业务提示。
             Score existingScore = scoreDao.findById(score.getId());
 
-            // 如果成绩不存在，业务层直接拦截。
+            // 如果成绩不存在，业务层直接拦截，返回 404。
             if (existingScore == null) {
-                throw new IllegalArgumentException("成绩不存在");
+                throw new NotFoundException("成绩不存在");
             }
 
             // 只更新分数、考试日期和备注；学生与课程关系不允许在修改成绩时变更。
@@ -188,9 +203,9 @@ public class ScoreServiceImpl implements ScoreService {
             // 先确认成绩存在，给调用方更明确的业务提示。
             Score existingScore = scoreDao.findById(id);
 
-            // 如果不存在，业务层直接拦截。
+            // 如果不存在，业务层直接拦截，返回 404。
             if (existingScore == null) {
-                throw new IllegalArgumentException("成绩不存在");
+                throw new NotFoundException("成绩不存在");
             }
 
             // 调用 DAO 删除成绩。
@@ -213,6 +228,13 @@ public class ScoreServiceImpl implements ScoreService {
         if (queryDTO == null) {
             throw new IllegalArgumentException("queryDTO 不能为空");
         }
+
+        // 分数区间需要满足 0 <= minScore <= maxScore <= 100。
+        validateScoreInterval(queryDTO.getMinScore(), queryDTO.getMaxScore());
+
+        // 规范化页码与每页条数，保证分页回显值和 DAO 实际执行的 SQL 一致。
+        queryDTO.setPage(PageUtil.normalizePage(queryDTO.getPage()));
+        queryDTO.setPageSize(PageUtil.normalizePageSize(queryDTO.getPageSize()));
 
         try {
             // 先统计符合条件的总记录数，用于前端分页器。
@@ -243,6 +265,11 @@ public class ScoreServiceImpl implements ScoreService {
         }
 
         try {
+            // 指定课程时先确认课程真实存在，避免把「课程不存在」误报为「全 0 成绩」。
+            if (courseId != null && courseDao.findById(courseId) == null) {
+                throw new NotFoundException("课程不存在");
+            }
+
             // 直接委托 DAO 统计平均分、最高分、最低分和及格率。
             return scoreDao.calculateStatistics(courseId);
         } catch (SQLException exception) {
@@ -270,6 +297,9 @@ public class ScoreServiceImpl implements ScoreService {
 
         // 校验分数必须在 0~100 之间。
         validateScoreRange(score.getScore());
+
+        // 校验备注长度。
+        requireMaxLength(score.getRemarks(), MAX_REMARKS_LENGTH, "成绩备注长度不能超过 255 个字符");
     }
 
     /**
@@ -288,6 +318,9 @@ public class ScoreServiceImpl implements ScoreService {
 
         // 修改时也要确保分数合法。
         validateScoreRange(score.getScore());
+
+        // 校验备注长度。
+        requireMaxLength(score.getRemarks(), MAX_REMARKS_LENGTH, "成绩备注长度不能超过 255 个字符");
     }
 
     /**
@@ -302,12 +335,35 @@ public class ScoreServiceImpl implements ScoreService {
         }
 
         // compareTo 避免受 BigDecimal 精度影响；0 <= score <= 100 才允许保存。
-        boolean valid = score.compareTo(BigDecimal.ZERO) >= 0
-                && score.compareTo(BigDecimal.valueOf(100)) <= 0;
+        boolean valid = score.compareTo(MIN_SCORE) >= 0
+                && score.compareTo(MAX_SCORE) <= 0;
 
         // 如果分数不合法，直接拦截。
         if (!valid) {
             throw new IllegalArgumentException("分数必须在 0~100 之间");
+        }
+    }
+
+    /**
+     * 校验成绩查询的分数区间。
+     *
+     * @param minScore 最低分，可为空
+     * @param maxScore 最高分，可为空
+     */
+    private void validateScoreInterval(Double minScore, Double maxScore) {
+        // 区间端点必须落在 0~100 之间。
+        if (minScore != null && (minScore < 0 || minScore > 100)) {
+            throw new IllegalArgumentException("最低分必须在 0~100 之间");
+        }
+
+        // 区间端点必须落在 0~100 之间。
+        if (maxScore != null && (maxScore < 0 || maxScore > 100)) {
+            throw new IllegalArgumentException("最高分必须在 0~100 之间");
+        }
+
+        // 最低分不能大于最高分。
+        if (minScore != null && maxScore != null && minScore > maxScore) {
+            throw new IllegalArgumentException("最低分不能大于最高分");
         }
     }
 
@@ -325,6 +381,20 @@ public class ScoreServiceImpl implements ScoreService {
     }
 
     /**
+     * 校验字符串长度上限。
+     *
+     * @param value     字符串值
+     * @param maxLength 允许的最大长度
+     * @param message   错误提示
+     */
+    private void requireMaxLength(String value, int maxLength, String message) {
+        // 超过数据库列长度时提前拦截。
+        if (value != null && value.length() > maxLength) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+
+    /**
      * 把 SQLException 包装成运行时异常。
      *
      * @param message   错误提示
@@ -334,5 +404,23 @@ public class ScoreServiceImpl implements ScoreService {
     private RuntimeException wrapException(String message, SQLException exception) {
         // 保留原始异常链，方便后续排查数据库问题。
         return new RuntimeException(message, exception);
+    }
+
+    /**
+     * 把新增场景的 SQLException 转换成运行时异常。
+     *
+     * @param message         默认错误提示
+     * @param conflictMessage 唯一性冲突提示
+     * @param exception       原始数据库异常
+     * @return 运行时异常
+     */
+    private RuntimeException wrapInsertException(String message, String conflictMessage, SQLException exception) {
+        // 唯一键冲突转换为 409。
+        if ("23000".equals(exception.getSQLState()) || exception.getErrorCode() == 1062) {
+            return new ConflictException(conflictMessage);
+        }
+
+        // 其他数据库异常保留原始异常链。
+        return wrapException(message, exception);
     }
 }

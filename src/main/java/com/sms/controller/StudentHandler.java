@@ -2,6 +2,8 @@ package com.sms.controller;
 
 // 导入 Gson 的 JSON 语法异常，用于把非法请求体转换为业务参数错误。
 import com.google.gson.JsonSyntaxException;
+// 导入日期解析异常，用于把非法日期字符串转换成 400 参数错误。
+import java.time.format.DateTimeParseException;
 // 导入 HTTP 请求对象。
 import com.sun.net.httpserver.HttpExchange;
 // 导入学生查询参数对象，用于接收 URL Query 参数。
@@ -322,6 +324,10 @@ public class StudentHandler extends BaseHttpHandler {
         } catch (JsonSyntaxException exception) {
             // JSON 语法非法时统一返回业务参数错误。
             throw new IllegalArgumentException("请求体 JSON 格式错误");
+        } catch (DateTimeParseException exception) {
+            // 日期字符串无法解析（例如 2024-13-45）属于 400 参数错误，而不是 500 服务器错误。
+            // 必须单独捕获，因为 DateTimeParseException 并不是 JsonSyntaxException 的子类。
+            throw new IllegalArgumentException("日期格式不正确，日期应使用 yyyy-MM-dd，时间应使用 yyyy-MM-dd HH:mm:ss");
         }
     }
 

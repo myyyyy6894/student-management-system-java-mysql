@@ -8,6 +8,8 @@ import com.sms.model.dto.StudentQueryDTO;
 import com.sms.model.entity.Student;
 // 导入数据库工具类，用于获取数据库连接。
 import com.sms.util.DBUtil;
+// 导入分页参数工具类，统一页码与每页条数的合法范围。
+import com.sms.util.PageUtil;
 // 导入数据库连接对象。
 import java.sql.Connection;
 // 导入 SQL Date 类，用于把 JDBC 日期转换成 LocalDate。
@@ -278,9 +280,12 @@ public class StudentDaoImpl implements StudentDao {
         String sql = BASE_SELECT + whereSql + " ORDER BY id ASC LIMIT ? OFFSET ?";
 
         // 计算 offset：第 1 页从第 0 条开始，第 2 页跳过第一页的数据。
-        int page = Math.max(1, queryDTO.getPage());
-        int pageSize = Math.max(1, queryDTO.getPageSize());
-        int offset = (page - 1) * pageSize;
+        // 统一使用 PageUtil 规范化参数，保证与 Service 层回显值一致。
+        int page = PageUtil.normalizePage(queryDTO.getPage());
+        int pageSize = PageUtil.normalizePageSize(queryDTO.getPageSize());
+
+        // 用 long 计算偏移量，避免超大页码导致 int 溢出成负数。
+        long offset = (long) (page - 1) * pageSize;
 
         // try-with-resources 自动关闭资源。
         try (Connection connection = DBUtil.getConnection();
@@ -299,8 +304,8 @@ public class StudentDaoImpl implements StudentDao {
 
             // 绑定 LIMIT：当前页最多返回多少条记录。
             statement.setInt(parameterIndex++, pageSize);
-            // 绑定 OFFSET：当前页之前需要跳过多少条记录。
-            statement.setInt(parameterIndex, offset);
+            // 绑定 OFFSET：当前页之前需要跳过多少条记录（用 long 接收 int 型占位符）。
+            statement.setLong(parameterIndex, offset);
 
             // 执行分页查询。
             try (ResultSet resultSet = statement.executeQuery()) {

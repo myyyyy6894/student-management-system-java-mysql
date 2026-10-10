@@ -22,6 +22,8 @@ import com.sms.service.impl.ScoreServiceImpl;
 import com.sms.util.JsonUtil;
 // 导入 Gson 的 JSON 语法异常。
 import com.google.gson.JsonSyntaxException;
+// 导入日期解析异常，用于把非法日期字符串转换成 400 参数错误。
+import java.time.format.DateTimeParseException;
 // 导入 IO 异常。
 import java.io.IOException;
 // 导入 Map 和 LinkedHashMap，用于解析 Query 参数和构造响应数据。
@@ -373,6 +375,10 @@ public class ScoreHandler extends BaseHttpHandler {
         } catch (JsonSyntaxException exception) {
             // JSON 语法非法时统一返回业务参数错误。
             throw new IllegalArgumentException("请求体 JSON 格式错误");
+        } catch (DateTimeParseException exception) {
+            // 日期字符串无法解析（例如 2024-13-45）属于 400 参数错误，而不是 500 服务器错误。
+            // 必须单独捕获，因为 DateTimeParseException 并不是 JsonSyntaxException 的子类。
+            throw new IllegalArgumentException("日期格式不正确，日期应使用 yyyy-MM-dd，时间应使用 yyyy-MM-dd HH:mm:ss");
         }
     }
 
@@ -433,7 +439,15 @@ public class ScoreHandler extends BaseHttpHandler {
 
         try {
             // 将字符串转换为 Double。
-            return Double.parseDouble(value);
+            double parsed = Double.parseDouble(value);
+
+            // 拒绝 NaN / Infinity 这类特殊值，避免把非法数值下传到 SQL。
+            if (!Double.isFinite(parsed)) {
+                throw new IllegalArgumentException("分数参数必须是合法数字");
+            }
+
+            // 返回解析后的分数。
+            return parsed;
         } catch (NumberFormatException exception) {
             // 参数格式非法时返回 400。
             throw new IllegalArgumentException("分数参数必须是数字");

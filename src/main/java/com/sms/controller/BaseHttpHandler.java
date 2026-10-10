@@ -4,12 +4,16 @@ package com.sms.controller;
 import com.sun.net.httpserver.HttpExchange;
 // 导入 HTTP 处理器接口，BaseHttpHandler 的子类最终都会被注册到 HttpServer。
 import com.sun.net.httpserver.HttpHandler;
+// 导入业务异常，用于按业务状态码（400/404/409）返回响应。
+import com.sms.exception.BusinessException;
 // 导入统一响应包装类，用于生成 code/message/data 格式的 JSON。
 import com.sms.model.vo.CommonResult;
 // 导入 JSON 工具类，避免手工拼接 JSON 字符串。
 import com.sms.util.JsonUtil;
 // 导入 IO 异常，读写请求体和响应体时可能抛出。
 import java.io.IOException;
+// 导入输入流，用于读取请求体。
+import java.io.InputStream;
 // 导入输出流，用于向客户端回写响应数据。
 import java.io.OutputStream;
 // 导入字符集类，统一使用 UTF-8 处理请求和响应。
@@ -29,6 +33,9 @@ import java.net.URLDecoder;
  * <p>具体业务路由由子类实现 {@link #processRequest(HttpExchange)}。</p>
  */
 public abstract class BaseHttpHandler implements HttpHandler {
+
+    // 请求体大小上限（1MB）。本项目都是小 JSON，超过该值基本可以判定为异常请求。
+    private static final int MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 
     /**
      * HTTP 请求统一入口。
@@ -61,17 +68,23 @@ public abstract class BaseHttpHandler implements HttpHandler {
         try {
             // 交给子类完成具体路由分发和业务调用。
             processRequest(exchange);
+        } catch (BusinessException exception) {
+            // BusinessException 自带业务状态码（404/409 等），直接按该状态码返回。
+            // 注意它继承自 IllegalArgumentException，因此这个分支必须排在前面。
+            int code = exception.getCode();
+            CommonResult<Object> result = CommonResult.error(code, safeMessage(exception, "业务处理失败"));
+            sendJsonResponse(exchange, code, JsonUtil.toJson(result));
         } catch (IllegalArgumentException exception) {
-            // IllegalArgumentException 通常表示请求参数错误或业务校验失败。
-            // 统一映射为 HTTP 400，并保留异常提示信息。
+            // 其余 IllegalArgumentException 表示请求参数错误或业务校验失败，统一映射为 HTTP 400。
             CommonResult<Object> result = CommonResult.error(400, safeMessage(exception, "请求参数错误"));
             sendJsonResponse(exchange, 400, JsonUtil.toJson(result));
         } catch (Throwable throwable) {
             // 这里必须捕获 Throwable，而不能只捕获 Exception。
             // 例如 DBUtil 静态初始化失败时会抛出 ExceptionInInitializerError，它属于 Error。
             // 如果只捕获 Exception，这类异常会导致响应头未发送，浏览器就可能看到 stream closed。
+            // 服务端打印完整堆栈便于排查，但返回给客户端的必须是通用文案，避免泄露表名/SQL 等内部细节。
             throwable.printStackTrace();
-            CommonResult<Object> result = CommonResult.error(500, safeMessage(throwable, "服务器内部错误"));
+            CommonResult<Object> result = CommonResult.error(500, "服务器内部错误");
             sendJsonResponse(exchange, 500, JsonUtil.toJson(result));
         }
     }
@@ -95,9 +108,14 @@ public abstract class BaseHttpHandler implements HttpHandler {
      */
     protected String readRequestBody(HttpExchange exchange) throws IOException {
         // 获取请求体输入流。
-        try (java.io.InputStream inputStream = exchange.getRequestBody()) {
-            // readAllBytes 会阻塞直到读到 EOF，也就是客户端请求体发送完毕。
-            byte[] bytes = inputStream.readAllBytes();
+        try (InputStream inputStream = exchange.getRequestBody()) {
+            // 最多读取「上限 + 1」个字节：如果读满就需要判断是否超限。
+            byte[] bytes = inputStream.readNBytes(MAX_REQUEST_BODY_BYTES + 1);
+
+            // 超过上限时直接拒绝，避免超大请求体占满内存。
+            if (bytes.length > MAX_REQUEST_BODY_BYTES) {
+                throw new IllegalArgumentException("请求体过大，最大允许 1MB");
+            }
 
             // HTTP 请求体本质是字节流，必须按 UTF-8 转成字符串，避免中文乱码。
             return new String(bytes, StandardCharsets.UTF_8);
@@ -153,10 +171,17 @@ public abstract class BaseHttpHandler implements HttpHandler {
     /**
      * 从请求路径末尾提取数字 ID。
      * <p>例如 basePath 为 /api/students，请求路径 /api/students/5 会返回 5。</p>
+     * <p>本方法严格区分三种情况：</p>
+     * <ol>
+     *   <li>集合路径（/api/students、/api/students/）→ 返回 null，调用方按列表处理；</li>
+     *   <li>合法详情路径（/api/students/5）→ 返回 5；</li>
+     *   <li>非法详情路径（/api/students/abc、/api/students/1/2）→ 抛出 IllegalArgumentException，由基类返回 400。</li>
+     * </ol>
+     * <p>这样可避免「非法 ID 被静默当成列表查询」而返回整张表的错误行为。</p>
      *
      * @param exchange 当前 HTTP 请求对象
      * @param basePath 资源基础路径，例如 /api/students
-     * @return 路径中的资源 ID；路径无效或 ID 不是数字时返回 null
+     * @return 集合路径返回 null；详情路径返回资源 ID
      */
     protected Long extractPathId(HttpExchange exchange, String basePath) {
         // 基础路径不能为空。
@@ -167,8 +192,13 @@ public abstract class BaseHttpHandler implements HttpHandler {
         // getRequestURI().getPath() 返回不包含 Query 的路径部分。
         String path = exchange.getRequestURI().getPath();
 
-        // 路径为空或不以基础路径开头时，无法提取 ID。
-        if (path == null || !path.startsWith(basePath)) {
+        // 路径为空时无法提取 ID。
+        if (path == null) {
+            return null;
+        }
+
+        // 只处理恰好等于基础路径，或位于基础路径之下的请求。
+        if (!path.equals(basePath) && !path.startsWith(basePath + "/")) {
             return null;
         }
 
@@ -192,15 +222,15 @@ public abstract class BaseHttpHandler implements HttpHandler {
 
         // 本项目的详情路径只支持一个数字 ID，不支持 /api/students/5/other 这种形式。
         if (remainder.contains("/")) {
-            return null;
+            throw new IllegalArgumentException("请求路径格式不正确");
         }
 
         try {
             // 将路径片段转换为 Long 类型的资源主键。
             return Long.parseLong(remainder);
         } catch (NumberFormatException exception) {
-            // ID 不是数字时返回 null，让子类决定是返回 404 还是 400。
-            return null;
+            // ID 不是合法数字属于参数错误，必须显式报错而不是回退成列表查询。
+            throw new IllegalArgumentException("路径 ID 必须是数字");
         }
     }
 
@@ -252,8 +282,8 @@ public abstract class BaseHttpHandler implements HttpHandler {
     /**
      * 获取安全的异常提示信息。
      *
-     * @param exception     原始异常
-     * @param defaultText   异常没有 message 时使用的默认提示
+     * @param throwable   原始异常
+     * @param defaultText 异常没有 message 时使用的默认提示
      * @return 可用于 JSON message 字段的非空文本
      */
     private String safeMessage(Throwable throwable, String defaultText) {

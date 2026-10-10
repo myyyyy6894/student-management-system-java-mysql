@@ -1184,8 +1184,23 @@
     }
 
     async function loadStudentsForScore() {
-      const data = await request(`/api/students?page=1&pageSize=100`);
-      state.scoreStudents = data.list || [];
+      // 分页循环拉取全部学生，避免学生总数超过单页上限后无法为其录入成绩。
+      const pageSize = 100;
+      const maxPages = 50;
+      const allStudents = [];
+
+      for (let page = 1; page <= maxPages; page += 1) {
+        const data = await request(`/api/students?page=${page}&pageSize=${pageSize}`);
+        const list = data.list || [];
+        allStudents.push(...list);
+
+        const total = Number(data.total || 0);
+        if (list.length === 0 || allStudents.length >= total) {
+          break;
+        }
+      }
+
+      state.scoreStudents = allStudents;
 
       $("#scoreStudentInput").innerHTML = '<option value="">请选择学生</option>'.concat(
         state.scoreStudents.map((student) => `<option value="${student.id}">${escapeHtml(`${student.studentNo} · ${student.name}`)}</option>`).join("")

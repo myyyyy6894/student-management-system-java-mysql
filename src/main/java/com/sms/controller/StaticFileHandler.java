@@ -72,10 +72,16 @@ public class StaticFileHandler implements HttpHandler {
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        // 本项目静态资源只允许 GET；HEAD 理论上也可支持，但这里保持简单。
-        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            // 返回 405，提示当前接口只允许 GET。
-            sendJson(exchange, 405, CommonResult.error(405, "静态资源只支持 GET 请求"));
+        // 读取请求方法并统一转为大写。
+        String method = exchange.getRequestMethod().toUpperCase();
+
+        // 静态资源支持 GET 与 HEAD；HEAD 只返回响应头，用于浏览器预检、健康检查和爬虫。
+        boolean headOnly = "HEAD".equals(method);
+
+        // 其余方法（POST/PUT/DELETE 等）一律拒绝。
+        if (!"GET".equals(method) && !headOnly) {
+            // 返回 405，提示当前接口只允许 GET / HEAD。
+            sendJson(exchange, 405, CommonResult.error(405, "静态资源只支持 GET / HEAD 请求"), false);
             return;
         }
 
@@ -84,7 +90,7 @@ public class StaticFileHandler implements HttpHandler {
 
         // 如果请求根路径，则返回默认首页。
         if (requestPath == null || requestPath.isBlank() || "/".equals(requestPath)) {
-            serveResource(exchange, INDEX_PAGE);
+            serveResource(exchange, INDEX_PAGE, headOnly);
             return;
         }
 
@@ -93,19 +99,19 @@ public class StaticFileHandler implements HttpHandler {
 
         // 如果路径为空，也回落到首页。
         if (relativePath.isBlank()) {
-            serveResource(exchange, INDEX_PAGE);
+            serveResource(exchange, INDEX_PAGE, headOnly);
             return;
         }
 
         // 阻止相对路径穿越攻击，例如 /../pom.xml。
         // 不能通过 URL 读取 static 目录以外的项目文件。
         if (relativePath.contains("..") || relativePath.contains("\\")) {
-            sendJson(exchange, 403, CommonResult.error(403, "非法资源路径"));
+            sendJson(exchange, 403, CommonResult.error(403, "非法资源路径"), headOnly);
             return;
         }
 
         // 尝试按请求路径读取静态资源。
-        serveResource(exchange, relativePath);
+        serveResource(exchange, relativePath, headOnly);
     }
 
     /**
@@ -113,9 +119,10 @@ public class StaticFileHandler implements HttpHandler {
      *
      * @param exchange     当前 HTTP 请求对象
      * @param relativePath static 目录下的相对路径
+     * @param headOnly     是否为 HEAD 请求（只回响应头，不写响应体）
      * @throws IOException 响应写出失败时抛出
      */
-    private void serveResource(HttpExchange exchange, String relativePath) throws IOException {
+    private void serveResource(HttpExchange exchange, String relativePath, boolean headOnly) throws IOException {
         // 如果请求的是目录形式，例如 /css/，尝试读取该目录下的 index.html。
         if (relativePath.endsWith("/")) {
             relativePath = relativePath + INDEX_PAGE;
@@ -129,7 +136,7 @@ public class StaticFileHandler implements HttpHandler {
 
         // 如果资源不存在，返回 404。
         if (inputStream == null) {
-            sendJson(exchange, 404, CommonResult.error(404, "静态资源不存在"));
+            sendJson(exchange, 404, CommonResult.error(404, "静态资源不存在"), headOnly);
             return;
         }
 
@@ -144,8 +151,13 @@ public class StaticFileHandler implements HttpHandler {
             // 开发阶段禁用缓存，前端修改 HTML/CSS/JS 后刷新浏览器即可生效。
             exchange.getResponseHeaders().set("Cache-Control", "no-store");
 
-            // 声明响应体长度，再写出真实字节。
-            exchange.sendResponseHeaders(200, bytes.length);
+            // 声明响应体长度（HEAD 请求也声明长度，只是不写响应体）。
+            exchange.sendResponseHeaders(200, headOnly ? -1 : bytes.length);
+
+            // HEAD 请求到此结束，不写响应体。
+            if (headOnly) {
+                return;
+            }
 
             // try-with-resources 自动关闭响应输出流。
             try (OutputStream outputStream = exchange.getResponseBody()) {
@@ -186,17 +198,23 @@ public class StaticFileHandler implements HttpHandler {
      * @param exchange 当前 HTTP 请求对象
      * @param status   HTTP 状态码
      * @param result   统一响应对象
+     * @param headOnly 是否为 HEAD 请求（只回响应头，不写响应体）
      * @throws IOException 响应写出失败时抛出
      */
-    private void sendJson(HttpExchange exchange, int status, CommonResult<Object> result) throws IOException {
+    private void sendJson(HttpExchange exchange, int status, CommonResult<Object> result, boolean headOnly) throws IOException {
         // 设置 JSON 响应类型。
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
 
         // 将统一响应对象转换成 JSON。
         byte[] bytes = JsonUtil.toJson(result).getBytes(StandardCharsets.UTF_8);
 
-        // 声明响应体长度。
-        exchange.sendResponseHeaders(status, bytes.length);
+        // 声明响应体长度（HEAD 请求不写响应体）。
+        exchange.sendResponseHeaders(status, headOnly ? -1 : bytes.length);
+
+        // HEAD 请求到此结束。
+        if (headOnly) {
+            return;
+        }
 
         // 写出 JSON 内容。
         try (OutputStream outputStream = exchange.getResponseBody()) {
