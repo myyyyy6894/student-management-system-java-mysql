@@ -43,3 +43,6 @@ student_management_system_specification.md
 
 ### IntelliJ IDEA
 .idea/
+
+### 本地数据库私有配置（请使用 db.properties.example 作为模板）
+src/main/resources/db.properties

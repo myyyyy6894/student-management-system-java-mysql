@@ -69,7 +69,8 @@ student-management-system
     │   │   │   └── vo/                       # CommonResult、PageResult、ScoreDetailVO...
     │   │   └── util                          # DBUtil、JsonUtil、PageUtil
     │   └── resources
-    │       ├── db.properties                 # 数据库连接配置
+    │       ├── db.properties.example         # 数据库连接配置模板（提交进仓库）
+    │       ├── db.properties                 # 本地实际配置（已 gitignore，不会入库）
     │       └── static/                       # 单文件前端页面 + 架构图 / ER 图 / 截图
     └── test/java/com/sms
         ├── support/InMemoryDaos.java          # 内存版 DAO 桩对象（测试用，无需数据库）
@@ -102,7 +103,20 @@ mysql -u root -p < sql/data.sql
 
 ### 第 2 步：配置数据库连接
 
-编辑 `src/main/resources/db.properties`，改成你自己环境的账号密码：
+项目使用 `src/main/resources/db.properties` 保存数据库账号密码。出于安全考虑，
+**该文件已被 `.gitignore` 忽略，不会提交到 Git 仓库**，仓库里只提供模板 `db.properties.example`。
+
+先复制模板，再填写你自己的账号密码：
+
+```bash
+# Linux / macOS
+cp src/main/resources/db.properties.example src/main/resources/db.properties
+
+# Windows (PowerShell / CMD)
+copy src\main\resources\db.properties.example src\main\resources\db.properties
+```
+
+然后编辑 `src/main/resources/db.properties`，把 `db.username` / `db.password` 改成你本机 MySQL 的真实值：
 
 ```properties
 db.driver=com.mysql.cj.jdbc.Driver
@@ -110,6 +124,9 @@ db.url=jdbc:mysql://127.0.0.1:3306/student_db?useSSL=false&serverTimezone=Asia/S
 db.username=root
 db.password=你的MySQL密码
 ```
+
+> 提示：如果启动时提示「未在 classpath 根路径找到 db.properties 配置文件」，
+> 说明第 2 步的复制动作还没做。
 
 ### 第 3 步：启动服务
 
@@ -270,6 +287,9 @@ mvn test
 
 **2. 接口返回 500，提示数据库相关错误？**
 检查 MySQL 是否启动、`db.properties` 账号密码是否正确、`student_db` 是否已创建。
+
+**2.1 克隆项目后启动报「未找到 db.properties」？**
+克隆下来的仓库只包含模板 `db.properties.example`，需要先复制为 `db.properties` 并填写密码（见「第 2 步」）。
 
 **3. 页面中文乱码？**
 确认数据库使用 `utf8mb4`，且 `db.url` 中带有 `characterEncoding=UTF-8`。
