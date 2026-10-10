@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生管理系统</title>
+  <style>
+    :root {
+      --bg: #f4f2ee;
+      --panel: #ffffff;
+      --line: #e3e0da;
+      --text: #24303c;
+      --muted: #71797f;
+      --accent: #37695b;
+      --accent-dark: #2c5449;
+      --danger: #b4483d;
+      --danger-bg: #fdf2f0;
+      --warn-bg: #fff8e6;
+      --radius: 10px;
+      --shadow: 0 10px 28px rgba(38, 50, 56, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner {
+      width: min(1280px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 18px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      background: #f1efeb;
+      border-radius: 9px;
+    }
+
+    .tab-btn {
+      min-width: 104px;
+      border: 0;
+      background: transparent;
+      color: #606a72;
+      padding: 9px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: #e9e6e0;
+    }
+
+    .tab-btn.active {
+      background: #fff;
+      color: var(--accent-dark);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .container {
+      width: min(1280px, calc(100% - 40px));
+      margin: 24px auto 48px;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      min-height: 68px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .panel-desc {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filters input,
+    .filters select,
+    .form-grid input,
+    .form-grid select,
+    .form-grid textarea {
+      min-height: 36px;
+      padding: 7px 10px;
+      border: 1px solid #d6d2cb;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .filters input,
+    .filters select {
+      width: 156px;
+    }
+
+    .filters input:focus,
+    .filters select:focus,
+    .form-grid input:focus,
+    .form-grid select:focus,
+    .form-grid textarea:focus {
+      border-color: #94b5aa;
+      box-shadow: 0 0 0 3px rgba(55, 105, 91, 0.12);
+    }
+
+    button {
+      font-family: inherit;
+    }
+
+    .btn {
+      min-height: 36px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 7px 14px;
+      cursor: pointer;
+      background: #eeece7;
+      color: var(--text);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: #e4e1db;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dark);
+    }
+
+    .btn-danger {
+      color: var(--danger);
+      background: var(--danger-bg);
+      border-color: #f0d3ce;
+    }
+
+    .btn-danger:hover {
+      background: #fbe7e3;
+    }
+
+    .btn-link {
+      background: transparent;
+      border-color: var(--line);
+    }
+
+    .btn-link:hover {
+      background: #f6f5f2;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid #eeece8;
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #faf9f7;
+      color: #5d666d;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    tbody tr:hover {
+      background: #fbfaf8;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    td.empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 36px 0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eef4f2;
+      color: #456b5f;
+      font-size: 12px;
+    }
+
+    .badge.muted {
+      background: #f1f0ed;
+      color: #767d82;
+    }
+
+    .score-low {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .stat-value {
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .stat-unit {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .stat-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .modal-backdrop.is-hidden {
+      display: none;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 8vh 16px 16px;
+      background: rgba(38, 44, 49, 0.38);
+      overflow: auto;
+    }
+
+    .modal {
+      width: min(720px, 100%);
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 18px 44px rgba(24, 32, 38, 0.22);
+      overflow: hidden;
+    }
+
+    .modal-sm {
+      width: min(420px, 100%);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .close-btn:hover {
+      background: #f1f0ed;
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 22px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px 18px;
+    }
+
+    .form-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-item.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-item label {
+      font-size: 13px;
+      color: #5c656c;
+    }
+
+    .form-item label b {
+      color: var(--danger);
+      font-weight: 400;
+    }
+
+    .form-grid input[readonly] {
+      background: #f7f6f4;
+      color: #68727a;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 22px;
+      border-top: 1px solid var(--line);
+      background: #faf9f7;
+    }
+
+    .confirm-text {
+      margin: 4px 0 0;
+      color: #5f686f;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 40;
+      max-width: min(420px, calc(100vw - 44px));
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: #24303c;
+      color: #fff;
+      box-shadow: 0 12px 26px rgba(24, 32, 38, 0.24);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: 0.2s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.error {
+      background: #8f362d;
+    }
+
+    .toast.success {
+      background: #33645a;
+    }
+
+    .loading {
+      position: relative;
+      color: var(--muted);
+    }
+
+    .loading::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin-top: -6px;
+      border: 2px solid #cfd8d4;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 860px) {
+      .header-inner,
+      .container {
+        width: min(1280px, calc(100% - 28px));
+      }
+
+      .header-inner {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 16px 0;
+      }
+
+      .tabs {
+        width: 100%;
+      }
+
+      .tab-btn {
+        flex: 1;
+      }
+
+      .stat-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .filters input,
+      .filters select {
+        width: 100%;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .filters .btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .brand h1 {
+        font-size: 18px;
+      }
+
+      .actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      th,
+      td {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div>
+          <h1>学生管理系统</h1>
+          <small>Java SE · MySQL · 原生 HTTP Server</small>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="功能导航">
+        <button class="tab-btn active" data-tab="students" type="button">学生档案管理</button>
+        <button class="tab-btn" data-tab="scores" type="button">成绩记录管理</button>
+        <button class="tab-btn" data-tab="stats" type="button">成绩统计看板</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="students-page" class="page active" aria-labelledby="students-title">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div id="students-title" class="panel-title">学生档案</div>
+            <div class="panel-desc">维护学生基础信息，支持学号、姓名、专业和班级筛选。</div>
+          </div>
+
+          <div class="filters">
+            <input id="studentKeyword" type="search" placeholder="姓名 / 学号" aria-label="姓名或学号">
+            <input id="studentMajor" type="text" placeholder="专业" aria-label="专业">
+            <input id="studentClassName" type="text" placeholder="班级" aria-label="班级">
+            <button id="studentSearchBtn" class="btn btn-primary" type="button">查询</button>
+            <button id="studentResetBtn" class="btn" type="button">重置</button>
+            <button id="openCreateStudentBtn" class="btn btn-primary" type="button">新增学生</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>性别</th>
+                <th>出生日期</th>
+                <th>专业</th>
+                <th>班级</th>
+                <th>联系方式</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span id="studentPageInfo">共 0 条</span>
+          <button id="studentPrevBtn" class="btn btn-link" type="button">上一页</button>
+          <span id="studentCurrentPage">1 / 1</span>
+          <button id="studentNextBtn" class="btn btn-link" type="button">下一页</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scores-page" class="page" aria-labelledby="scores-title">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div id="scores-title" class="panel-title">成绩记录</div>
+            <div class="panel-desc">按课程和学生条件查询成绩明细，支持分数区间筛选。</div>
+          </div>
+
+          <div class="filters">
+            <select id="scoreCourseFilter" aria-label="课程筛选"></select>
+            <input id="scoreStudentNameFilter" type="search" placeholder="学生姓名" aria-label="学生姓名">
+            <input id="minScoreFilter" type="number" min="0" max="100" step="0.01" placeholder="最低分" aria-label="最低分">
+            <input id="maxScoreFilter" type="number" min="0" max="100" step="0.01" placeholder="最高分" aria-label="最高分">
+            <button id="scoreSearchBtn" class="btn btn-primary" type="button">查询</button>
+            <button id="scoreResetBtn" class="btn" type="button">重置</button>
+            <button id="openCreateScoreBtn" class="btn btn-primary" type="button">录入成绩</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>班级</th>
+                <th>课程</th>
+                <th>学分</th>
+                <th>成绩</th>
+                <th>考试日期</th>
+                <th>备注</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="scoreTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span id="scorePageInfo">共 0 条</span>
+          <button id="scorePrevBtn" class="btn btn-link" type="button">上一页</button>
+          <span id="scoreCurrentPage">1 / 1</span>
+          <button id="scoreNextBtn" class="btn btn-link" type="button">下一页</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="stats-page" class="page" aria-labelledby="stats-title">
+      <div class="panel-head" style="padding: 0 0 16px; border: 0;">
+        <div>
+          <div id="stats-title" class="panel-title">成绩统计</div>
+          <div class="panel-desc">按课程查看参考人数、平均分、最高/最低分和及格率。</div>
+        </div>
+        <select id="statsCourseFilter" class="filters" style="width: 260px; min-height: 36px;" aria-label="统计课程"></select>
+      </div>
+
+      <div class="stat-grid">
+        <article class="stat-card">
+          <div class="stat-label">考查总人数</div>
+          <div class="stat-value" id="statTotalStudents">0</div>
+          <div class="stat-sub">已录入成绩的学生数量</div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-label">平均分</div>
+          <div class="stat-value" id="statAverageScore">—</div>
+          <div class="stat-sub">四舍五入保留两位小数</div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-label">最高分 / 最低分</div>
+          <div class="stat-value" id="statScoreRange">—</div>
+          <div class="stat-sub">当前统计范围内的分数极值</div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-label">及格率</div>
+          <div class="stat-value" id="statPassRate">—</div>
+          <div class="stat-sub">成绩大于等于 60 分的比例</div>
+        </article>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">统计说明</div>
+            <div class="panel-desc">不选择课程时统计全部课程成绩；选择课程后只统计当前课程。</div>
+          </div>
+          <button id="refreshStatsBtn" class="btn" type="button">刷新统计</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>指标</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>考查总人数</td>
+                <td>统计范围内已存在成绩记录的学生数量。</td>
+              </tr>
+              <tr>
+                <td>平均分</td>
+                <td>所有有效成绩的平均值，后端保留两位小数。</td>
+              </tr>
+              <tr>
+                <td>最高分 / 最低分</td>
+                <td>统计范围内的最大值和最小值。</td>
+              </tr>
+              <tr>
+                <td>及格率</td>
+                <td>成绩大于等于 60 分的人数除以总人数，以百分比展示。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="studentModalBackdrop" class="modal-backdrop is-hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="studentModalTitle">
+      <div class="modal-head">
+        <h2 id="studentModalTitle">新增学生</h2>
+        <button class="close-btn" data-close-modal="studentModalBackdrop" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <form id="studentForm" novalidate>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-item">
+              <label for="studentNoInput">学号 <b>*</b></label>
+              <input id="studentNoInput" name="studentNo" type="text" maxlength="32" required>
+            </div>
+
+            <div class="form-item">
+              <label for="studentNameInput">姓名 <b>*</b></label>
+              <input id="studentNameInput" name="name" type="text" maxlength="50" required>
+            </div>
+
+            <div class="form-item">
+              <label for="studentGenderInput">性别 <b>*</b></label>
+              <select id="studentGenderInput" name="gender" required>
+                <option value="1">男</option>
+                <option value="2">女</option>
+                <option value="0">未知</option>
+              </select>
+            </div>
+
+            <div class="form-item">
+              <label for="studentBirthDateInput">出生日期</label>
+              <input id="studentBirthDateInput" name="birthDate" type="date">
+            </div>
+
+            <div class="form-item">
+              <label for="studentPhoneInput">联系电话</label>
+              <input id="studentPhoneInput" name="phone" type="tel" maxlength="20">
+            </div>
+
+            <div class="form-item">
+              <label for="studentEmailInput">电子邮箱</label>
+              <input id="studentEmailInput" name="email" type="email" maxlength="100">
+            </div>
+
+            <div class="form-item">
+              <label for="studentMajorInput">专业 <b>*</b></label>
+              <input id="studentMajorInput" name="major" type="text" maxlength="100" required>
+            </div>
+
+            <div class="form-item">
+              <label for="studentClassNameInput">班级 <b>*</b></label>
+              <input id="studentClassNameInput" name="className" type="text" maxlength="50" required>
+            </div>
+
+            <div class="form-item">
+              <label for="studentStatusInput">学籍状态</label>
+              <select id="studentStatusInput" name="status">
+                <option value="1">在读</option>
+                <option value="2">休学</option>
+                <option value="3">退学</option>
+                <option value="4">毕业</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn" type="button" data-close-modal="studentModalBackdrop">取消</button>
+          <button class="btn btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="scoreModalBackdrop" class="modal-backdrop is-hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scoreModalTitle">
+      <div class="modal-head">
+        <h2 id="scoreModalTitle">录入成绩</h2>
+        <button class="close-btn" data-close-modal="scoreModalBackdrop" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <form id="scoreForm" novalidate>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-item">
+              <label for="scoreStudentInput">学生 <b>*</b></label>
+              <select id="scoreStudentInput" name="studentId" required></select>
+            </div>
+
+            <div class="form-item">
+              <label for="scoreCourseInput">课程 <b>*</b></label>
+              <select id="scoreCourseInput" name="courseId" required></select>
+            </div>
+
+            <div class="form-item">
+              <label for="scoreValueInput">成绩 <b>*</b></label>
+              <input id="scoreValueInput" name="score" type="number" min="0" max="100" step="0.01" required>
+            </div>
+
+            <div class="form-item">
+              <label for="scoreExamDateInput">考试日期</label>
+              <input id="scoreExamDateInput" name="examDate" type="date">
+            </div>
+
+            <div class="form-item full">
+              <label for="scoreRemarksInput">备注</label>
+              <textarea id="scoreRemarksInput" name="remarks" rows="3" maxlength="255" placeholder="可填写补考、重修或卷面复核说明"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn" type="button" data-close-modal="scoreModalBackdrop">取消</button>
+          <button class="btn btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="confirmModalBackdrop" class="modal-backdrop is-hidden">
+    <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-head">
+        <h2 id="confirmTitle">操作确认</h2>
+        <button class="close-btn" data-close-modal="confirmModalBackdrop" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <div class="modal-body">
+        <p id="confirmMessage" class="confirm-text"></p>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn" type="button" data-close-modal="confirmModalBackdrop">取消</button>
+        <button id="confirmAcceptBtn" class="btn btn-danger" type="button">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const state = {
+      students: [],
+      scoreStudents: [],
+      scores: [],
+      courses: [],
+      studentPage: 1,
+      studentPageSize: 10,
+      studentTotal: 0,
+      scorePage: 1,
+      scorePageSize: 10,
+      scoreTotal: 0,
+      editingStudentId: null,
+      editingScoreId: null,
+      confirmAction: null
+    };
+
+    const genderText = { 0: "未知", 1: "男", 2: "女" };
+    const statusText = { 1: "在读", 2: "休学", 3: "退学", 4: "毕业" };
+
+    const $ = (selector) => document.querySelector(selector);
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) {
+        return "";
+      }
+
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "—";
+      }
+
+      return String(value).slice(0, 10);
+    }
+
+    function formatNumber(value, digits = 2) {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+
+      const number = Number(value);
+      return Number.isFinite(number) ? number.toFixed(digits) : "—";
+    }
+
+    function getQueryText(value) {
+      return value === null || value === undefined ? "" : String(value).trim();
+    }
+
+    function buildQuery(params) {
+      const query = new URLSearchParams();
+
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          query.set(key, String(value));
+        }
+      });
+
+      const text = query.toString();
+      return text ? `?${text}` : "";
+    }
+
+    async function request(url, options = {}) {
+      const config = { ...options };
+
+      if (config.body) {
+        config.headers = { "Content-Type": "application/json; charset=UTF-8", ...(config.headers || {}) };
+      }
+
+      const response = await fetch(url, config);
+      let payload;
+
+      try {
+        payload = await response.json();
+      } catch (error) {
+        throw new Error(`服务响应异常（HTTP ${response.status}）`);
+      }
+
+      if (!response.ok || payload.code !== 200) {
+        throw new Error(payload.message || `请求失败（HTTP ${response.status}）`);
+      }
+
+      return payload.data;
+    }
+
+    function showToast(message, type = "info") {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.className = `toast show ${type}`;
+
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => {
+        toast.className = "toast";
+      }, 3000);
+    }
+
+    function openModal(id) {
+      $(`#${id}`).classList.remove("is-hidden");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal(id) {
+      $(`#${id}`).classList.add("is-hidden");
+
+      if (!document.querySelector(".modal-backdrop:not(.is-hidden)")) {
+        document.body.style.overflow = "";
+      }
+    }
+
+    function confirmAction(message, action) {
+      $("#confirmMessage").textContent = message;
+      state.confirmAction = action;
+      openModal("confirmModalBackdrop");
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === tabName);
+      });
+
+      document.querySelectorAll(".page").forEach((page) => {
+        page.classList.remove("active");
+      });
+
+      $(`#${tabName}-page`).classList.add("active");
+    }
+
+    function setButtonLoading(button, loading, normalText) {
+      if (loading) {
+        button.dataset.originalText = button.textContent;
+        button.textContent = "处理中...";
+        button.disabled = true;
+        button.classList.add("loading");
+      } else {
+        button.textContent = normalText || button.dataset.originalText || button.textContent;
+        button.disabled = false;
+        button.classList.remove("loading");
+      }
+    }
+
+    async function loadStudents() {
+      const params = {
+        page: state.studentPage,
+        pageSize: state.studentPageSize,
+        keyword: getQueryText($("#studentKeyword").value),
+        major: getQueryText($("#studentMajor").value),
+        className: getQueryText($("#studentClassName").value)
+      };
+
+      const data = await request(`/api/students${buildQuery(params)}`);
+      state.students = data.list || [];
+      state.studentTotal = data.total || 0;
+
+      renderStudents();
+    }
+
+    function renderStudents() {
+      const tbody = $("#studentTableBody");
+
+      if (!state.students.length) {
+        tbody.innerHTML = '<tr><td class="empty" colspan="10">暂无学生数据</td></tr>';
+      } else {
+        tbody.innerHTML = state.students.map((student) => `
+          <tr>
+            <td>${escapeHtml(student.id)}</td>
+            <td>${escapeHtml(student.studentNo)}</td>
+            <td>${escapeHtml(student.name)}</td>
+            <td>${escapeHtml(genderText[student.gender] || "未知")}</td>
+            <td>${escapeHtml(formatDate(student.birthDate))}</td>
+            <td>${escapeHtml(student.major)}</td>
+            <td>${escapeHtml(student.className)}</td>
+            <td>${escapeHtml(student.phone || "—")}</td>
+            <td><span class="badge">${escapeHtml(statusText[student.status] || "未知")}</span></td>
+            <td>
+              <div class="actions">
+                <button class="btn btn-link" data-edit-student="${student.id}" type="button">编辑</button>
+                <button class="btn btn-danger" data-delete-student="${student.id}" type="button">删除</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      }
+
+      const totalPages = Math.max(1, Math.ceil(state.studentTotal / state.studentPageSize));
+      $("#studentPageInfo").textContent = `共 ${state.studentTotal} 条`;
+      $("#studentCurrentPage").textContent = `${state.studentPage} / ${totalPages}`;
+      $("#studentPrevBtn").disabled = state.studentPage <= 1;
+      $("#studentNextBtn").disabled = state.studentPage >= totalPages;
+    }
+
+    function openStudentModal(student) {
+      const isEdit = Boolean(student);
+      $("#studentModalTitle").textContent = isEdit ? "编辑学生" : "新增学生";
+      $("#studentNoInput").readOnly = isEdit;
+      $("#studentNoInput").value = student ? student.studentNo : "";
+      $("#studentNameInput").value = student ? student.name : "";
+      $("#studentGenderInput").value = student ? String(student.gender ?? 1) : "1";
+      $("#studentBirthDateInput").value = student ? formatDate(student.birthDate) : "";
+      $("#studentPhoneInput").value = student ? (student.phone || "") : "";
+      $("#studentEmailInput").value = student ? (student.email || "") : "";
+      $("#studentMajorInput").value = student ? student.major : "";
+      $("#studentClassNameInput").value = student ? student.className : "";
+      $("#studentStatusInput").value = student ? String(student.status ?? 1) : "1";
+
+      state.editingStudentId = student ? student.id : null;
+      openModal("studentModalBackdrop");
+    }
+
+    async function saveStudent(form, button) {
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+
+      payload.gender = Number(payload.gender);
+      payload.status = Number(payload.status);
+
+      if (!payload.birthDate) {
+        delete payload.birthDate;
+      }
+
+      if (state.editingStudentId) {
+        payload.id = state.editingStudentId;
+        await request(`/api/students/${state.editingStudentId}`, { method: "PUT", body: JSON.stringify(payload) });
+        showToast("学生信息已更新", "success");
+      } else {
+        await request("/api/students", { method: "POST", body: JSON.stringify(payload) });
+        showToast("学生添加成功", "success");
+      }
+
+      closeModal("studentModalBackdrop");
+      form.reset();
+      state.editingStudentId = null;
+      await loadStudents();
+    }
+
+    function deleteStudent(studentId) {
+      confirmAction("确定要删除该学生档案吗？删除后不可恢复。", async () => {
+        await request(`/api/students/${studentId}`, { method: "DELETE" });
+        showToast("学生已删除", "success");
+        await loadStudents();
+      });
+    }
+
+    async function loadCourses() {
+      const courses = await request("/api/courses");
+      state.courses = Array.isArray(courses) ? courses : [];
+
+      const options = ['<option value="">全部课程</option>'].concat(
+        state.courses.map((course) => `<option value="${course.id}">${escapeHtml(course.name)}</option>`)
+      ).join("");
+
+      $("#scoreCourseFilter").innerHTML = options;
+      $("#statsCourseFilter").innerHTML = options;
+      $("#scoreCourseInput").innerHTML = '<option value="">请选择课程</option>'.concat(
+        state.courses.map((course) => `<option value="${course.id}">${escapeHtml(course.name)}</option>`).join("")
+      );
+    }
+
+    async function loadStudentsForScore() {
+      const data = await request(`/api/students?page=1&pageSize=100`);
+      state.scoreStudents = data.list || [];
+
+      $("#scoreStudentInput").innerHTML = '<option value="">请选择学生</option>'.concat(
+        state.scoreStudents.map((student) => `<option value="${student.id}">${escapeHtml(`${student.studentNo} · ${student.name}`)}</option>`).join("")
+      );
+    }
+
+    async function loadScores() {
+      const params = {
+        page: state.scorePage,
+        pageSize: state.scorePageSize,
+        courseId: $("#scoreCourseFilter").value,
+        studentName: getQueryText($("#scoreStudentNameFilter").value),
+        minScore: $("#minScoreFilter").value,
+        maxScore: $("#maxScoreFilter").value
+      };
+
+      const data = await request(`/api/scores${buildQuery(params)}`);
+      state.scores = data.list || [];
+      state.scoreTotal = data.total || 0;
+
+      renderScores();
+    }
+
+    function renderScores() {
+      const tbody = $("#scoreTableBody");
+
+      if (!state.scores.length) {
+        tbody.innerHTML = '<tr><td class="empty" colspan="10">暂无成绩数据</td></tr>';
+      } else {
+        tbody.innerHTML = state.scores.map((item) => {
+          const scoreClass = Number(item.score) < 60 ? "score-low" : "";
+          return `
+            <tr>
+              <td>${escapeHtml(item.id)}</td>
+              <td>${escapeHtml(item.studentNo)}</td>
+              <td>${escapeHtml(item.studentName)}</td>
+              <td>${escapeHtml(item.className)}</td>
+              <td>${escapeHtml(item.courseName)}</td>
+              <td>${escapeHtml(formatNumber(item.credit, 1))}</td>
+              <td class="${scoreClass}">${escapeHtml(formatNumber(item.score))}</td>
+              <td>${escapeHtml(formatDate(item.examDate))}</td>
+              <td>${escapeHtml(item.remarks || "—")}</td>
+              <td>
+                <div class="actions">
+                  <button class="btn btn-link" data-edit-score="${item.id}" type="button">编辑</button>
+                  <button class="btn btn-danger" data-delete-score="${item.id}" type="button">删除</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      const totalPages = Math.max(1, Math.ceil(state.scoreTotal / state.scorePageSize));
+      $("#scorePageInfo").textContent = `共 ${state.scoreTotal} 条`;
+      $("#scoreCurrentPage").textContent = `${state.scorePage} / ${totalPages}`;
+      $("#scorePrevBtn").disabled = state.scorePage <= 1;
+      $("#scoreNextBtn").disabled = state.scorePage >= totalPages;
+    }
+
+    function openScoreModal(score) {
+      const isEdit = Boolean(score);
+      $("#scoreModalTitle").textContent = isEdit ? "修改成绩" : "录入成绩";
+      $("#scoreStudentInput").disabled = isEdit;
+      $("#scoreCourseInput").disabled = isEdit;
+
+      $("#scoreStudentInput").value = score ? String(score.studentId) : "";
+      $("#scoreCourseInput").value = score ? String(score.courseId) : "";
+      $("#scoreValueInput").value = score ? score.score : "";
+      $("#scoreExamDateInput").value = score ? formatDate(score.examDate) : "";
+      $("#scoreRemarksInput").value = score ? (score.remarks || "") : "";
+
+      state.editingScoreId = score ? score.id : null;
+      openModal("scoreModalBackdrop");
+    }
+
+    async function saveScore(form, button) {
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+
+      if (state.editingScoreId) {
+        payload.score = payload.score === "" ? null : Number(payload.score);
+        payload.examDate = payload.examDate || null;
+        await request(`/api/scores/${state.editingScoreId}`, { method: "PUT", body: JSON.stringify(payload) });
+        showToast("成绩已更新", "success");
+      } else {
+        payload.studentId = Number(payload.studentId);
+        payload.courseId = Number(payload.courseId);
+        payload.score = payload.score === "" ? null : Number(payload.score);
+        payload.examDate = payload.examDate || null;
+        await request("/api/scores", { method: "POST", body: JSON.stringify(payload) });
+        showToast("成绩录入成功", "success");
+      }
+
+      closeModal("scoreModalBackdrop");
+      form.reset();
+      $("#scoreStudentInput").disabled = false;
+      $("#scoreCourseInput").disabled = false;
+      state.editingScoreId = null;
+      await loadScores();
+    }
+
+    function deleteScore(scoreId) {
+      confirmAction("确定要删除这条成绩记录吗？", async () => {
+        await request(`/api/scores/${scoreId}`, { method: "DELETE" });
+        showToast("成绩已删除", "success");
+        await loadScores();
+      });
+    }
+
+    async function loadStatistics() {
+      const courseId = $("#statsCourseFilter").value;
+      const stats = await request(`/api/scores/statistics${buildQuery({ courseId })}`);
+
+      $("#statTotalStudents").textContent = stats.totalStudents || 0;
+      $("#statAverageScore").textContent = formatNumber(stats.averageScore);
+      $("#statScoreRange").textContent = stats.maxScore === null || stats.maxScore === undefined
+        ? "—"
+        : `${formatNumber(stats.maxScore)} / ${formatNumber(stats.minScore)}`;
+      $("#statPassRate").textContent = stats.passRate === null || stats.passRate === undefined
+        ? "—"
+        : `${formatNumber(stats.passRate)}%`;
+    }
+
+    function bindEvents() {
+      document.querySelectorAll(".tab-btn").forEach((button) => {
+        button.addEventListener("click", () => switchTab(button.dataset.tab));
+      });
+
+      document.querySelectorAll("[data-close-modal]").forEach((button) => {
+        button.addEventListener("click", () => closeModal(button.dataset.closeModal));
+      });
+
+      document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+        backdrop.addEventListener("click", (event) => {
+          if (event.target === backdrop) {
+            closeModal(backdrop.id);
+          }
+        });
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          document.querySelectorAll(".modal-backdrop:not(.is-hidden)").forEach((backdrop) => {
+            closeModal(backdrop.id);
+          });
+        }
+      });
+
+      $("#studentSearchBtn").addEventListener("click", () => {
+        state.studentPage = 1;
+        loadStudents();
+      });
+
+      $("#studentResetBtn").addEventListener("click", () => {
+        $("#studentKeyword").value = "";
+        $("#studentMajor").value = "";
+        $("#studentClassName").value = "";
+        state.studentPage = 1;
+        loadStudents();
+      });
+
+      $("#openCreateStudentBtn").addEventListener("click", () => openStudentModal(null));
+
+      $("#studentTableBody").addEventListener("click", (event) => {
+        const editButton = event.target.closest("[data-edit-student]");
+        const deleteButton = event.target.closest("[data-delete-student]");
+
+        if (editButton) {
+          const student = state.students.find((item) => String(item.id) === editButton.dataset.editStudent);
+          if (student) openStudentModal(student);
+        }
+
+        if (deleteButton) {
+          deleteStudent(deleteButton.dataset.deleteStudent);
+        }
+      });
+
+      $("#studentPrevBtn").addEventListener("click", () => {
+        if (state.studentPage > 1) {
+          state.studentPage -= 1;
+          loadStudents();
+        }
+      });
+
+      $("#studentNextBtn").addEventListener("click", () => {
+        const totalPages = Math.ceil(state.studentTotal / state.studentPageSize);
+        if (state.studentPage < totalPages) {
+          state.studentPage += 1;
+          loadStudents();
+        }
+      });
+
+      $("#studentForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = event.target.querySelector('[type="submit"]');
+        setButtonLoading(button, true, "保存");
+
+        try {
+          await saveStudent(event.target, button);
+        } catch (error) {
+          showToast(error.message, "error");
+        } finally {
+          setButtonLoading(button, false, "保存");
+        }
+      });
+
+      $("#scoreSearchBtn").addEventListener("click", () => {
+        state.scorePage = 1;
+        loadScores();
+      });
+
+      $("#scoreResetBtn").addEventListener("click", () => {
+        $("#scoreCourseFilter").value = "";
+        $("#scoreStudentNameFilter").value = "";
+        $("#minScoreFilter").value = "";
+        $("#maxScoreFilter").value = "";
+        state.scorePage = 1;
+        loadScores();
+      });
+
+      $("#openCreateScoreBtn").addEventListener("click", () => openScoreModal(null));
+
+      $("#scoreTableBody").addEventListener("click", (event) => {
+        const editButton = event.target.closest("[data-edit-score]");
+        const deleteButton = event.target.closest("[data-delete-score]");
+
+        if (editButton) {
+          const score = state.scores.find((item) => String(item.id) === editButton.dataset.editScore);
+          if (score) openScoreModal(score);
+        }
+
+        if (deleteButton) {
+          deleteScore(deleteButton.dataset.deleteScore);
+        }
+      });
+
+      $("#scorePrevBtn").addEventListener("click", () => {
+        if (state.scorePage > 1) {
+          state.scorePage -= 1;
+          loadScores();
+        }
+      });
+
+      $("#scoreNextBtn").addEventListener("click", () => {
+        const totalPages = Math.ceil(state.scoreTotal / state.scorePageSize);
+        if (state.scorePage < totalPages) {
+          state.scorePage += 1;
+          loadScores();
+        }
+      });
+
+      $("#scoreForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = event.target.querySelector('[type="submit"]');
+        setButtonLoading(button, true, "保存");
+
+        try {
+          await saveScore(event.target, button);
+        } catch (error) {
+          showToast(error.message, "error");
+        } finally {
+          setButtonLoading(button, false, "保存");
+        }
+      });
+
+      $("#refreshStatsBtn").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        setButtonLoading(button, true, "刷新统计");
+
+        try {
+          await loadStatistics();
+        } catch (error) {
+          showToast(error.message, "error");
+        } finally {
+          setButtonLoading(button, false, "刷新统计");
+        }
+      });
+
+      $("#statsCourseFilter").addEventListener("change", loadStatistics);
+
+      $("#confirmAcceptBtn").addEventListener("click", async () => {
+        if (!state.confirmAction) {
+          closeModal("confirmModalBackdrop");
+          return;
+        }
+
+        try {
+          await state.confirmAction();
+          state.confirmAction = null;
+          closeModal("confirmModalBackdrop");
+        } catch (error) {
+          showToast(error.message, "error");
+          closeModal("confirmModalBackdrop");
+          state.confirmAction = null;
+        }
+      });
+    }
+
+    async function init() {
+      bindEvents();
+
+      try {
+        await Promise.all([loadCourses(), loadStudentsForScore()]);
+        await Promise.all([loadStudents(), loadScores(), loadStatistics()]);
+      } catch (error) {
+        showToast(error.message, "error");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

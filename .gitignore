@@ -37,3 +37,9 @@ build/
 
 ### Mac OS ###
 .DS_Store
+### 本地内部文档（后续由 README.md 替代）
+development_roadmap_and_guide.md
+student_management_system_specification.md
+
+### IntelliJ IDEA
+.idea/
