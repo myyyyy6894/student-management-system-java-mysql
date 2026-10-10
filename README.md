@@ -13,6 +13,9 @@
 
 本项目是一个用于**学习与实践**的后端小项目，覆盖了从建库建表、DAO/Service/Controller 分层、RESTful 接口设计，到静态前端页面托管与端到端联调的完整链路。
 
+> 🎓 **适用场景**：本项目可直接用于**大学生 Java 课程设计 / 数据库课程设计 / 软件工程课程实训**。
+> 需求完整、分层清晰、注释详尽，配套数据库建表脚本与 ER 图，既能直接演示，也方便在此基础上二次开发并撰写课程设计报告。
+
 系统包含三大功能模块：
 
 | 模块 | 说明 |
@@ -67,7 +70,7 @@ student-management-system
     │   │   └── util                          # DBUtil、JsonUtil、PageUtil
     │   └── resources
     │       ├── db.properties                 # 数据库连接配置
-    │       └── static/                       # 单文件前端页面 + 架构图 / 截图
+    │       └── static/                       # 单文件前端页面 + 架构图 / ER 图 / 截图
     └── test/java/com/sms
         ├── support/InMemoryDaos.java          # 内存版 DAO 桩对象（测试用，无需数据库）
         ├── *Test.java                         # JUnit 5 自动化单元测试
@@ -225,6 +228,14 @@ curl "http://localhost:8080/api/scores/statistics?courseId=1"
 - 同一学生在同一门课程下只能有一条成绩记录；
 - 成绩取值范围 `0.00 ~ 100.00`，学分取值范围 `0.5 ~ 10.0`；
 - 学生/课程名下有成绩时禁止删除，保护历史数据完整性。
+
+### 数据库 ER 图
+
+下图同时给出**概念模型（Chen 氏 ER 图：实体 / 联系 / 属性）**与**逻辑与物理模型（关系表结构、主键 PK、外键 FK、唯一约束 UK、级联规则）**：
+
+<p align="center">
+  <img src="src/main/resources/static/student_db_er_diagram.png" alt="学生管理系统数据库 ER 图（概念模型 + 关系模型）" width="100%">
+</p>
 
 ---
 
